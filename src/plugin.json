@@ -1,0 +1,30 @@
+{
+  "type": "datasource",
+  "name": "Dremio",
+  "id": "digital-hub-dremio",
+  "metrics": true,
+  "info": {
+    "description": "",
+    "author": {
+      "name": "etomaselli",
+      "url": ""
+    },
+    "keywords": [],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=7.0.0",
+    "plugins": []
+  },
+  "routes": [
+    {
+      "url": "{{ .JsonData.url }}"
+    }
+  ]
+}
