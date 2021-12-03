@@ -11,13 +11,13 @@ The plugin is just frontend and interacts with Dremio REST API. Its requests are
 1. Clone the plugin repository inside your Grafana [plugin directory](https://grafana.com/docs/grafana/latest/administration/configuration/#plugins):
 
    ```
-   git clone https://github.com/scc-digitalhub/dremio-datasource-plugin.git
+   git clone https://github.com/scc-digitalhub/grafana-dremio-datasource-plugin.git
    ```
 
 2. Install the dependencies:
 
    ```
-   cd dremio-datasource-plugin
+   cd grafana-dremio-datasource-plugin
    yarn install
    ```
 
