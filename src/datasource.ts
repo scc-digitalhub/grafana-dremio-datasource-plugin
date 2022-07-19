@@ -23,9 +23,15 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
   typesMap = {
     BOOLEAN: FieldType.boolean,
-    INTEGER: FieldType.number, BIGINT: FieldType.number, FLOAT: FieldType.number, DOUBLE: FieldType.number, DECIMAL: FieldType.number,
+    INTEGER: FieldType.number,
+    BIGINT: FieldType.number,
+    FLOAT: FieldType.number,
+    DOUBLE: FieldType.number,
+    DECIMAL: FieldType.number,
     VARCHAR: FieldType.string,
-    TIME: FieldType.time, DATE: FieldType.time, TIMESTAMP: FieldType.time,
+    TIME: FieldType.time,
+    DATE: FieldType.time,
+    TIMESTAMP: FieldType.time,
   };
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
@@ -39,41 +45,41 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
   async getUserToken() {
     return getBackendSrv().datasourceRequest({
-      method: "POST",
+      method: 'POST',
       url: `${this.proxyUrl}/apiv2/login`,
-      headers: {"Content-Type": "application/json"},
-      data: {userName: this.user, password: this.password},
+      headers: { 'Content-Type': 'application/json' },
+      data: { userName: this.user, password: this.password },
     });
   }
 
   async sendQuery(query: string) {
     return getBackendSrv().datasourceRequest({
-      method: "POST",
+      method: 'POST',
       url: `${this.proxyUrl}/api/v3/sql`,
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": this.tokenPrefix + this.token,
+        'Content-Type': 'application/json',
+        Authorization: this.tokenPrefix + this.token,
       },
-      data: {sql: query},
+      data: { sql: query },
     });
   }
 
   async getJobInfo(jobId: string) {
     return getBackendSrv().datasourceRequest({
-      method: "GET",
+      method: 'GET',
       url: `${this.proxyUrl}/api/v3/job/${jobId}`,
       headers: {
-        "Authorization": this.tokenPrefix + this.token,
+        Authorization: this.tokenPrefix + this.token,
       },
     });
   }
 
   async getJobResults(jobId: string) {
     return getBackendSrv().datasourceRequest({
-      method: "GET",
+      method: 'GET',
       url: `${this.proxyUrl}/api/v3/job/${jobId}/results`,
       headers: {
-        "Authorization": this.tokenPrefix + this.token,
+        Authorization: this.tokenPrefix + this.token,
       },
     });
   }
@@ -90,7 +96,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       const promises = options.targets.map(async target => {
         const query = defaults(target, defaultQuery);
 
-        if(query.queryText === undefined || _.isEmpty(query.queryText)) {
+        if (query.queryText === undefined || _.isEmpty(query.queryText)) {
           //there is no query to execute, return nothing
           return new MutableDataFrame();
         }
@@ -107,25 +113,25 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         const timer = setTimeout(() => {
           running = false;
           errorMessage = 'Query ' + query.refId + ' timed out';
-        }, query.queryTimeout*1000);
+        }, query.queryTimeout * 1000);
 
-        while(running) {
+        while (running) {
           const jobInfo = await this.getJobInfo(queryResponse.data.id);
           console.log('job state', jobInfo.data.jobState);
 
           //job states: NOT_SUBMITTED, STARTING, RUNNING, COMPLETED, CANCELED, FAILED, CANCELLATION_REQUESTED, ENQUEUED
-          if(jobInfo.data.jobState == 'COMPLETED') {
+          if (jobInfo.data.jobState === 'COMPLETED') {
             running = false;
             completed = true;
             clearTimeout(timer);
-          } else if(jobInfo.data.jobState == 'FAILED') {
+          } else if (jobInfo.data.jobState === 'FAILED') {
             running = false;
             errorMessage = jobInfo.data.errorMessage;
             clearTimeout(timer);
           } //else keep trying until timeout
         }
 
-        if(completed) {
+        if (completed) {
           //2.3 use job ID to retrieve result
           const jobResults = await this.getJobResults(queryResponse.data.id);
 
@@ -134,14 +140,16 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
           _.forEach(jobResults.data.schema, (field: any) => {
             var type = undefined;
-            if(field.name === query.timeCol) {
+            if (field.name === query.timeCol) {
               type = FieldType.time;
             } else {
-              type = _.find(this.typesMap, (val, key) => { return _.lowerCase(key) === _.lowerCase(field.type.name); });
+              type = _.find(this.typesMap, (val, key) => {
+                return _.lowerCase(key) === _.lowerCase(field.type.name);
+              });
             }
 
             frameFields[field.name] = {
-              fieldType: (type ? type : FieldType.other),
+              fieldType: type ? type : FieldType.other,
               values: [],
             };
           }); //frameFields = { mytime: {fieldType: number, values: []} }
@@ -167,8 +175,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         }
       });
 
-      return Promise.all(promises).then((data) => ({ data }));
-    } catch(err) {
+      return Promise.all(promises).then(data => ({ data }));
+    } catch (err) {
       console.log(err);
       return { data: [] };
     }
@@ -190,7 +198,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           message: response.statusText ? response.statusText : defaultErrorMessage,
         };
       }
-    } catch(err) {
+    } catch (err) {
       const errorMessage = _.isString(err) ? err : defaultErrorMessage;
       return {
         status: 'error',

@@ -1,9 +1,9 @@
 import React, { ChangeEvent, PureComponent } from 'react';
 import { LegacyForms } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { MyDataSourceOptions/*, MySecureJsonData*/ } from './types';
+import { MyDataSourceOptions /*, MySecureJsonData*/ } from './types';
 
-const { /*SecretFormField, */FormField } = LegacyForms;
+const { /*SecretFormField, */ FormField } = LegacyForms;
 
 interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions> {}
 
@@ -65,18 +65,13 @@ export class ConfigEditor extends PureComponent<Props, State> {
 
   render() {
     const { options } = this.props;
-    const { jsonData/*, secureJsonFields*/ } = options;
+    const { jsonData /*, secureJsonFields*/ } = options;
     //const secureJsonData = (options.secureJsonData || {}) as MySecureJsonData;
 
     return (
       <div className="gf-form-group">
         <div className="gf-form">
-          <FormField
-            label="URL"
-            onChange={this.onUrlChange}
-            value={jsonData.url || ''}
-            placeholder="Dremio URL"
-          />
+          <FormField label="URL" onChange={this.onUrlChange} value={jsonData.url || ''} placeholder="Dremio URL" />
         </div>
 
         <div className="gf-form">
@@ -96,8 +91,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
             placeholder="Dremio password"
           />
         </div>
-
-
       </div>
     );
   }

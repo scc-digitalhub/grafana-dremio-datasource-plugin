@@ -18,7 +18,7 @@ export class QueryEditor extends PureComponent<Props> {
 
   onQueryTimeoutChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query } = this.props;
-    onChange({ ...query, queryTimeout: parseInt(event.target.value) });
+    onChange({ ...query, queryTimeout: parseInt(event.target.value, 10) });
   };
 
   onTimeColChange = (event: ChangeEvent<HTMLInputElement>) => {
