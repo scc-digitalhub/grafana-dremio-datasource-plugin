@@ -40,3 +40,19 @@ The plugin is just frontend and interacts with Dremio REST API. Its requests are
    ```
 
 4. Restart Grafana.
+
+## Distribution
+
+The archives inside the *releases* folder can be unpackaged into the Grafana plugin directory (with local Grafana) or used in combination with `GF_INSTALL_PLUGINS` environment variable (with Docker) to install this plugin.
+
+**Steps to recreate the archive:**
+
+1. Clone the `dist` folder and name the clone `digital-hub-dremio`
+
+2. Zip the new folder:
+
+   ```
+   zip digital-hub-dremio-1.0.0.zip digital-hub-dremio -r
+   ```
+
+3. Delete the new folder
