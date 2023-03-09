@@ -9,9 +9,8 @@ import {
   MutableDataFrame,
   FieldType,
 } from '@grafana/data';
-
 import { MyQuery, MyDataSourceOptions, defaultQuery } from './types';
-import { getBackendSrv } from '@grafana/runtime'; //proxies requests through Grafana server
+import { getBackendSrv, getTemplateSrv } from '@grafana/runtime'; //proxies requests through Grafana server
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   url: string;
@@ -101,8 +100,10 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           return new MutableDataFrame();
         }
 
+        let q = getTemplateSrv().replace(query.queryText, options.scopedVars);
+
         //2.1. send query and receive job ID
-        const queryResponse = await this.sendQuery(query.queryText);
+        const queryResponse = await this.sendQuery(q);
         console.log('job ID', queryResponse.data.id);
 
         //2.2 check job status
