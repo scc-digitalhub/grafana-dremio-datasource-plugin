@@ -74,12 +74,16 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     });
   }
 
-  async getJobResults(jobId: string) {
+  async getJobResults(jobId: string, limit?: number, offset?: number) {
     return getBackendSrv().datasourceRequest({
       method: 'GET',
       url: `${this.proxyUrl}/api/v3/job/${jobId}/results`,
       headers: {
         Authorization: this.tokenPrefix + this.token,
+      },
+      params: {
+        limit: limit,
+        offset: offset,
       },
     });
   }
@@ -200,13 +204,34 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     if (completed) {
       //2.3 use job ID to retrieve result
-      const jobResults = await this.getJobResults(queryResponse.data.id);
+      const data = await this.getCompleteJobResults(queryResponse.data.id);
 
       //2.4 return data
-      return jobResults.data;
+      return data;
     } else {
       return Promise.reject('Query ' + refId + ' failed. ' + errorMessage);
     }
+  }
+
+  async getCompleteJobResults(jobId: string) {
+    const limit = 500; //max results supported by the API
+
+    //get first page
+    const jobResults = await this.getJobResults(jobId, limit);
+    const rowCount = jobResults.data.rowCount;
+    let data = jobResults.data;
+
+    if (rowCount > limit) {
+      //get all pages and add their rows to the first one
+      let pageIndex = 1;
+      while (data.rows.length < rowCount) {
+        const newPage = await this.getJobResults(jobId, limit, limit * pageIndex);
+        data.rows.push(...newPage.data.rows);
+        pageIndex += 1;
+      }
+    }
+
+    return data;
   }
 
   async testDatasource() {
