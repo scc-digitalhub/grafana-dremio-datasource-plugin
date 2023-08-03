@@ -240,9 +240,11 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       data.rows.push(...newPage.data.rows);
     }
 
-    //get last page
-    const lastPage = await this.getJobResults(jobId, remainder, API_LIMIT * pageIndex);
-    data.rows.push(...lastPage.data.rows);
+    //get last page if there are remaining records to fetch
+    if (remainder > 0) {
+      const lastPage = await this.getJobResults(jobId, remainder, API_LIMIT * pageIndex);
+      data.rows.push(...lastPage.data.rows);
+    }
 
     return data;
   }
