@@ -47,7 +47,7 @@ The archives inside the *releases* folder can be unpackaged into the Grafana plu
 
 **Steps to recreate the archive:**
 
-1. Clone the `dist` folder and name the clone `digital-hub-dremio`
+1. After running `yarn build`, clone the `dist` folder and name the clone `digital-hub-dremio`
 
 2. Zip the new folder:
 

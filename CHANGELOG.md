@@ -11,3 +11,7 @@ Support for variable interpolation in queries.
 ## 1.0.2 (Unreleased)
 
 Support for query variables, paginated jobs handling.
+
+## 1.0.3 (Unreleased)
+
+Support for custom maximum number of records to fetch as query results.
