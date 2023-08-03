@@ -1,7 +1,7 @@
 import defaults from 'lodash/defaults';
 
 import React, { ChangeEvent, PureComponent } from 'react';
-import { LegacyForms, TextArea } from '@grafana/ui';
+import { LegacyForms, Slider, TextArea } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from './datasource';
 import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
@@ -26,9 +26,14 @@ export class QueryEditor extends PureComponent<Props> {
     onChange({ ...query, timeCol: event.target.value });
   };
 
+  onMaxRecordsChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onChange, query } = this.props;
+    onChange({ ...query, maxRecords: parseInt(event.target.value, 10) });
+  };
+
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { queryText, queryTimeout, timeCol } = query;
+    const { queryText, queryTimeout, timeCol, maxRecords } = query;
 
     return (
       <div className="gf-form-group">
@@ -61,6 +66,17 @@ export class QueryEditor extends PureComponent<Props> {
               label="Time column"
               labelWidth={10}
               tooltip="Required for time series visualization (defaults to 'time_col')"
+            />
+          </div>
+          <div className="gf-form">
+            <FormField
+              value={maxRecords}
+              onChange={this.onMaxRecordsChange}
+              label="Max records"
+              labelWidth={10}
+              type="number"
+              step="1"
+              tooltip="Maximum number of records to fetch (defaults to 10000, which is the maximum allowed)"
             />
           </div>
         </div>

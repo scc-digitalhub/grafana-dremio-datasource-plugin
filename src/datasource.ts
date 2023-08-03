@@ -152,7 +152,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         //interpolate template vars, default to wrapping each value in single quotes as expected by Dremio if no format is specified
         let q = getTemplateSrv().replace(query.queryText, options.scopedVars, 'singlequote');
 
-        const data = await this.doQuery(q, query.refId, query.queryTimeout);
+        const data = await this.doQuery(q, query.refId, query.queryTimeout, query.maxRecords);
         return this.getDataframe(data, query.timeCol, query.refId);
       });
 
@@ -169,9 +169,10 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
    * @param q             Query string
    * @param refId         Query ID
    * @param queryTimeout  Timeout in ms
+   * @param maxRecords    Max number of records to fetch
    * @returns Dremio data
    */
-  async doQuery(q: string, refId: string, queryTimeout: number) {
+  async doQuery(q: string, refId: string, queryTimeout: number, maxRecords: number) {
     //2.1. send query and receive job ID
     const queryResponse = await this.sendQuery(q);
     console.log('query', refId, 'job ID', queryResponse.data.id);
@@ -180,6 +181,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     let running = true;
     let completed = false;
     let errorMessage = '';
+    let rowCount = 0;
 
     const timer = setTimeout(() => {
       running = false;
@@ -195,6 +197,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         running = false;
         completed = true;
         clearTimeout(timer);
+        rowCount = jobInfo.data.rowCount;
       } else if (jobInfo.data.jobState === 'FAILED') {
         running = false;
         errorMessage = jobInfo.data.errorMessage;
@@ -204,7 +207,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     if (completed) {
       //2.3 use job ID to retrieve result
-      const data = await this.getCompleteJobResults(queryResponse.data.id);
+      const data = await this.getCompleteJobResults(queryResponse.data.id, rowCount, maxRecords);
 
       //2.4 return data
       return data;
@@ -213,23 +216,33 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     }
   }
 
-  async getCompleteJobResults(jobId: string) {
-    const limit = 500; //max results supported by the API
+  async getCompleteJobResults(jobId: string, rowCount: number, maxRecords: number) {
+    const recordsToFetch = rowCount > maxRecords ? maxRecords : rowCount;
+    const API_LIMIT = 500; //max results supported by the API
+
+    if (recordsToFetch <= API_LIMIT) {
+      //short-circuit
+      const jobResults = await this.getJobResults(jobId, recordsToFetch);
+      return jobResults.data;
+    }
 
     //get first page
-    const jobResults = await this.getJobResults(jobId, limit);
-    const rowCount = jobResults.data.rowCount;
+    const jobResults = await this.getJobResults(jobId, API_LIMIT);
     let data = jobResults.data;
 
-    if (rowCount > limit) {
-      //get all pages and add their rows to the first one
-      let pageIndex = 1;
-      while (data.rows.length < rowCount) {
-        const newPage = await this.getJobResults(jobId, limit, limit * pageIndex);
-        data.rows.push(...newPage.data.rows);
-        pageIndex += 1;
-      }
+    //get all pages except last one and add their rows to the first one
+    const pages = Math.floor(recordsToFetch / API_LIMIT);
+    const remainder = recordsToFetch % API_LIMIT;
+
+    let pageIndex;
+    for (pageIndex = 1; pageIndex < pages; pageIndex++) {
+      const newPage = await this.getJobResults(jobId, API_LIMIT, API_LIMIT * pageIndex);
+      data.rows.push(...newPage.data.rows);
     }
+
+    //get last page
+    const lastPage = await this.getJobResults(jobId, remainder, API_LIMIT * pageIndex);
+    data.rows.push(...lastPage.data.rows);
 
     return data;
   }
@@ -276,7 +289,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       let q = getTemplateSrv().replace(query.rawQuery, undefined, 'singlequote');
 
       //execute query
-      const data = await this.doQuery(q, 'var', 60);
+      const data = await this.doQuery(q, 'var', 60, 10000);
 
       //convert query results to a MetricFindValue[]
       const values = data.rows.filter((row: any) => row[query.column]).map((row: any) => ({ text: row[query.column] }));
