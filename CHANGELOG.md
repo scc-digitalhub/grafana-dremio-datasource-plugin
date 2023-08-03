@@ -15,3 +15,7 @@ Support for query variables, paginated jobs handling.
 ## 1.0.3 (Unreleased)
 
 Support for custom maximum number of records to fetch as query results.
+
+## 1.1.0 (Unreleased)
+
+Migration from grafana-toolkit to create-plugin tool for plugin management.
