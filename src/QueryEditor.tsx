@@ -28,7 +28,10 @@ export class QueryEditor extends PureComponent<Props> {
 
   onMaxRecordsChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query } = this.props;
-    onChange({ ...query, maxRecords: parseInt(event.target.value, 10) });
+    const newval = parseInt(event.target.value, 10);
+    if (newval <= 10000) {
+      onChange({ ...query, maxRecords: newval });
+    }
   };
 
   render() {

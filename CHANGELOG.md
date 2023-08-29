@@ -19,3 +19,7 @@ Support for custom maximum number of records to fetch as query results.
 ## 1.1.0 (Unreleased)
 
 Migration from grafana-toolkit to create-plugin tool for plugin management.
+
+## 1.1.1 (Unreleased)
+
+Limit of 10000 records to fetch as query results.
