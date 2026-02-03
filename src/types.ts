@@ -1,4 +1,5 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataSourceJsonData } from '@grafana/data';
+import { DataQuery } from '@grafana/schema';
 
 /**
  * Options of the query editor
@@ -19,12 +20,13 @@ export const defaultQuery: Partial<MyQuery> = {
   maxRecords: 10000,
 };
 
-/**
- * Options of variables based on queries
- */
-export interface MyVariableQuery {
-  rawQuery: string;
-  column: string;
+export interface DataPoint {
+  Time: number;
+  Value: number;
+}
+
+export interface DataSourceResponse {
+  datapoints: DataPoint[];
 }
 
 /**
@@ -33,12 +35,20 @@ export interface MyVariableQuery {
 export interface MyDataSourceOptions extends DataSourceJsonData {
   url: string;
   user: string;
-  password: string;
 }
 
 /**
  * Value that is used in the backend, but never sent over HTTP to the frontend
  */
 export interface MySecureJsonData {
-  apiKey?: string;
+  password?: string;
+}
+
+/**
+ * Options of variables based on queries
+ */
+export interface MyVariableQuery {
+  refId: string;
+  rawQuery: string;
+  column: string;
 }

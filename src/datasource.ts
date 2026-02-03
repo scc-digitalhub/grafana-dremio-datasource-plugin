@@ -1,22 +1,22 @@
 import defaults from 'lodash/defaults';
 import _ from 'lodash';
-
+import { getBackendSrv, isFetchError, getTemplateSrv } from '@grafana/runtime';
 import {
   DataQueryRequest,
   DataQueryResponse,
   DataSourceApi,
   DataSourceInstanceSettings,
-  MutableDataFrame,
   FieldType,
   MetricFindValue,
+  MutableDataFrame,
 } from '@grafana/data';
+
 import { MyQuery, MyDataSourceOptions, defaultQuery, MyVariableQuery } from './types';
-import { getBackendSrv, getTemplateSrv } from '@grafana/runtime'; //proxies requests through Grafana server
+import { MyVariableSupport } from 'variableSupport';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   url: string;
   user: string;
-  password: string;
   proxyUrl: string;
   tokenPrefix = '_dremio';
   token = undefined;
@@ -36,29 +36,37 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
-
     this.url = instanceSettings.jsonData.url || '';
     this.user = instanceSettings.jsonData.user || '';
-    this.password = instanceSettings.jsonData.password || '';
     this.proxyUrl = instanceSettings.url ? instanceSettings.url : this.url; //default to non-proxied request
+    this.variables = new MyVariableSupport(this);
+    
+  }
+
+  getDefaultQuery(): Partial<MyQuery> {
+    return defaultQuery;
+  }
+
+  filterQuery(query: MyQuery): boolean {
+    // if no query has been provided, prevent the query from being executed
+    return !!query.queryText;
   }
 
   async getUserToken() {
     return getBackendSrv().datasourceRequest({
       method: 'POST',
-      url: `${this.proxyUrl}/apiv2/login`,
-      headers: { 'Content-Type': 'application/json' },
-      data: { userName: this.user, password: this.password },
+      url: `${this.proxyUrl}/token/apiv2/login`,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  async sendQuery(query: string) {
+    async sendQuery(query: string) {
     return getBackendSrv().datasourceRequest({
       method: 'POST',
-      url: `${this.proxyUrl}/api/v3/sql`,
+      url: `${this.proxyUrl}/api/api/v3/sql`,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: this.tokenPrefix + this.token,
+        Authorization: this.token,
       },
       data: { sql: query },
     });
@@ -67,9 +75,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   async getJobInfo(jobId: string) {
     return getBackendSrv().datasourceRequest({
       method: 'GET',
-      url: `${this.proxyUrl}/api/v3/job/${jobId}`,
+      url: `${this.proxyUrl}/api/api/v3/job/${jobId}`,
       headers: {
-        Authorization: this.tokenPrefix + this.token,
+        Authorization: this.token,
       },
     });
   }
@@ -77,9 +85,9 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   async getJobResults(jobId: string, limit?: number, offset?: number) {
     return getBackendSrv().datasourceRequest({
       method: 'GET',
-      url: `${this.proxyUrl}/api/v3/job/${jobId}/results`,
+      url: `${this.proxyUrl}/api/api/v3/job/${jobId}/results`,
       headers: {
-        Authorization: this.tokenPrefix + this.token,
+        Authorization: this.token,
       },
       params: {
         limit: limit,
@@ -131,12 +139,31 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     return frame;
   }
+  // async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
+  //   const { range } = options;
+  //   const from = range!.from.valueOf();
+  //   const to = range!.to.valueOf();
+
+  //   // Return a constant for each query.
+  //   const data = options.targets.map((target) => {
+  //     return createDataFrame({
+  //       refId: target.refId,
+  //       fields: [
+  //         { name: 'Time', values: [from, to], type: FieldType.time },
+  //         { name: 'Value', values: [target.constant, target.constant], type: FieldType.number },
+  //       ],
+  //     });
+  //   });
+
+  //   return { data };
+  // }
+
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
     try {
       //1. ensure there is a token
       if (this.token === undefined) {
-        const tokenResponse = await this.getUserToken();
+        const tokenResponse: any = await this.getUserToken();
         this.token = tokenResponse.data.token;
       }
 
@@ -149,11 +176,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
         //apply defaults
         const query = defaults(target, defaultQuery);
+
         //interpolate template vars, default to wrapping each value in single quotes as expected by Dremio if no format is specified
         let q = getTemplateSrv().replace(query.queryText, options.scopedVars, 'singlequote');
 
-        const data = await this.doQuery(q, query.refId, query.queryTimeout, query.maxRecords);
-        return this.getDataframe(data, query.timeCol, query.refId);
+        const data = await this.doQuery(q, query.refId!, query.queryTimeout!, query.maxRecords!);
+        return this.getDataframe(data, query.timeCol!, query.refId!);
       });
 
       return Promise.all(promises).then(data => ({ data }));
@@ -174,7 +202,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
    */
   async doQuery(q: string, refId: string, queryTimeout: number, maxRecords: number) {
     //2.1. send query and receive job ID
-    const queryResponse = await this.sendQuery(q);
+    const queryResponse: any = await this.sendQuery(q);
     console.log('query', refId, 'job ID', queryResponse.data.id);
 
     //2.2 check job status
@@ -189,7 +217,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     }, queryTimeout * 1000);
 
     while (running) {
-      const jobInfo = await this.getJobInfo(queryResponse.data.id);
+      const jobInfo: any = await this.getJobInfo(queryResponse.data.id);
       console.log('query', refId, 'job state', jobInfo.data.jobState);
 
       //job states: NOT_SUBMITTED, STARTING, RUNNING, COMPLETED, CANCELED, FAILED, CANCELLATION_REQUESTED, ENQUEUED
@@ -228,7 +256,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     //get first page
     const jobResults = await this.getJobResults(jobId, API_LIMIT);
-    let data = jobResults.data;
+    let data: any = jobResults.data;
 
     //get all pages except last one and add their rows to the first one
     const pages = Math.floor(recordsToFetch / API_LIMIT);
@@ -236,43 +264,24 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     let pageIndex;
     for (pageIndex = 1; pageIndex < pages; pageIndex++) {
-      const newPage = await this.getJobResults(jobId, API_LIMIT, API_LIMIT * pageIndex);
+      const newPage: any = await this.getJobResults(jobId, API_LIMIT, API_LIMIT * pageIndex);
       data.rows.push(...newPage.data.rows);
     }
 
     //get last page if there are remaining records to fetch
     if (remainder > 0) {
-      const lastPage = await this.getJobResults(jobId, remainder, API_LIMIT * pageIndex);
+      const lastPage: any = await this.getJobResults(jobId, remainder, API_LIMIT * pageIndex);
       data.rows.push(...lastPage.data.rows);
     }
 
     return data;
   }
-
-  async testDatasource() {
-    const defaultErrorMessage = 'Cannot connect to API';
-    try {
-      const response = await this.getUserToken();
-      if (response.status === 200) {
-        //server is reachable and credentials are valid
-        return {
-          status: 'success',
-          message: 'Success',
-        };
-      } else {
-        return {
-          status: 'error',
-          message: response.statusText ? response.statusText : defaultErrorMessage,
-        };
-      }
-    } catch (err) {
-      const errorMessage = _.isString(err) ? err : defaultErrorMessage;
-      return {
-        status: 'error',
-        message: errorMessage,
-      };
-    }
-  }
+  // async request(url: string, params?: string) {
+  //   const response = getBackendSrv().fetch<DataSourceResponse>({
+  //     url: `${this.baseUrl}${url}${params?.length ? `?${params}` : ''}`,
+  //   });
+  //   return lastValueFrom(response);
+  // }
 
   async metricFindQuery(query: MyVariableQuery, options?: any): Promise<MetricFindValue[]> {
     if (query.rawQuery === undefined || _.isEmpty(query.rawQuery)) {
@@ -283,7 +292,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     try {
       //ensure there is a token
       if (this.token === undefined) {
-        const tokenResponse = await this.getUserToken();
+        const tokenResponse: any = await this.getUserToken();
         this.token = tokenResponse.data.token;
       }
 
@@ -299,6 +308,43 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     } catch (error) {
       console.log('Error fetching values: ' + error);
       return Promise.reject('Error fetching values: ' + error);
+    }
+  }
+
+
+  /**
+   * Checks whether we can connect to the API.
+   */
+  async testDatasource() {
+    const defaultErrorMessage = 'Cannot connect to API';
+
+    try {
+      const response = await this.getUserToken();
+      if (response.status === 200) {
+        return {
+          status: 'success',
+          message: 'Success',
+        };
+      } else {
+        return {
+          status: 'error',
+          message: response.statusText ? response.statusText : defaultErrorMessage,
+        };
+      }
+    } catch (err) {
+      let message = '';
+      if (typeof err === 'string') {
+        message = err;
+      } else if (isFetchError(err)) {
+        message = 'Fetch error: ' + (err.statusText ? err.statusText : defaultErrorMessage);
+        if (err.data && err.data.error && err.data.error.code) {
+          message += ': ' + err.data.error.code + '. ' + err.data.error.message;
+        }
+      }
+      return {
+        status: 'error',
+        message,
+      };
     }
   }
 }
