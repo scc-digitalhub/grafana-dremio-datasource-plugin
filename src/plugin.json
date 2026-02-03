@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
   "name": "Dremio",
-  "id": "digitalhub-dremio-datasource",
+  "id": "digital-hub-dremio",
   "metrics": true,
   "info": {
     "description": "",

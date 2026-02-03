@@ -1,7 +1,7 @@
 services:
   grafana:
     user: root
-    container_name: 'digitalhub-dremio-datasource'
+    container_name: 'digital-hub-dremio'
 
     build:
       context: .
@@ -13,13 +13,13 @@ services:
     ports:
       - 3000:3000/tcp
     volumes:
-      - ../dist:/var/lib/grafana/plugins/digitalhub-dremio-datasource
+      - ../dist:/var/lib/grafana/plugins/digital-hub-dremio
       - ../provisioning:/etc/grafana/provisioning
-      - ..:/root/digitalhub-dremio-datasource
+      - ..:/root/digital-hub-dremio
 
     environment:
       NODE_ENV: development
-      GF_LOG_FILTERS: plugin.digitalhub-dremio-datasource:debug
+      GF_LOG_FILTERS: plugin.digital-hub-dremio:debug
       GF_LOG_LEVEL: debug
       GF_DATAPROXY_LOGGING: 1
-      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: digitalhub-dremio-datasource
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: digital-hub-dremio
